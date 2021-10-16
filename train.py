@@ -44,9 +44,9 @@ def sample_then_optimize(p, X_train, y_train, X_test, y_test, prior_variance=1.0
         k_losses = []
 
         # draw k Monte Carlo dropout samples to approximate expectation of P(D|theta)
+        # draw samples from approximating dropout distribution
         for j in range(k):
-            # draw samples from approximating dropout distribution
-            l = - (model(X_train[i]) - y_train[i])**2 / (2*noise_variance) - 1/2 * np.log(2*np.pi*noise_variance)
+            l = - (model(X_train[i]) - y_train[i])**2 / (2*noise_variance) # - 1/2 * np.log(2*np.pi*noise_variance)
             k_losses.append(l.item())
 
         n_losses.append(k_losses)
@@ -102,4 +102,3 @@ def train_to_convergence(w, X, y, p=0, step_size=0.001, num_steps=500):
 
     # print("Steps: {}".format(s))
     return best["model"], best["naive_sotl"]
-
