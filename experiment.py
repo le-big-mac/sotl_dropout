@@ -62,10 +62,12 @@ y = data[:, int(index_target.tolist())]
 n_splits = np.loadtxt(_N_SPLITS_FILE)
 print("Done.")
 
-csv_str = "dropout_prob,0.0,0.1,0.2,0.3,0.4,0.5,\n"
+header = "dropout_prob,0.0,0.1,0.2,0.3,0.4,0.5,\n"
+with open("./results/{}.txt".format(data_directory), "w+") as f:
+    f.write(header)
+
 
 for split in range(int(n_splits)):
-
     # We load the indexes of the training and test sets
     print('Loading file: ' + _get_index_train_test_path(split, train=True))
     print('Loading file: ' + _get_index_train_test_path(split, train=False))
@@ -112,10 +114,11 @@ for split in range(int(n_splits)):
         sample_results["naive_sotl"].append(naive_sotl)
         sample_results["gen"].append(gen)
 
+    csv_str = "{},\n".format(split)
     for k in sample_results:
         csv_str += "{},".format(k)
-        csv_str += ",".join(sample_results[k])
+        csv_str += ",".join(str(e) for e in sample_results[k])
         csv_str += ",\n"
 
-with open("./results/{}.txt".format(data_directory), "w+") as f:
-    f.write(csv_str)
+    with open("./results/{}.txt".format(data_directory), "a") as f:
+        f.write(csv_str)
