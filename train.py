@@ -2,19 +2,20 @@ import numpy as np
 import torch
 from torch import nn
 from copy import deepcopy
+from math import sqrt
 
 
 device = "cpu"
 
 
 class LinearModel(nn.Module):
-    def __init__(self, w: torch.tensor, p=0):
+    def __init__(self, dim, prior_variance=1.0, p=0):
         super(LinearModel, self).__init__()
 
         self.dr = nn.Dropout(p) if p > 0 else lambda x: x
-        self.w = nn.Linear(len(w), 1, bias=False)
-        with torch.no_grad():
-            self.w.weight.copy_(w)
+        self.w = nn.Linear(dim, 1, bias=True)
+        nn.init.normal_(self.w.weight, mean=0.0, std=sqrt(prior_variance))
+        nn.init.normal_(self.w.bias, mean=0.0, std=sqrt(prior_variance))
 
     def forward(self, x):
         x = self.dr(x)
@@ -27,32 +28,32 @@ def sample_then_optimize(p, X_train, y_train, X_test, y_test, prior_variance=1.0
     y_train = torch.tensor(y_train)
     X_train.to(device)
     y_train.to(device)
+    d = len(X_train[0])
 
-    n_losses = []
+    sotl = 0
+    mc_sotl = 0
 
     for i in range(n-1):
-        # sample new weights each time (maybe not necessary)
-        w = torch.normal(0, prior_variance, (len(X_train[0]),))
-
-        if i == 0:
-            model = LinearModel(w, p).double()
-        else:
-            model, _ = train_to_convergence(w, X_train[:i], y_train[:i], p)
-
-        # put model in train to get loss with Monte Carlo dropout
-        model.train()
-        k_losses = []
-
-        # draw k Monte Carlo dropout samples to approximate expectation of P(D|theta)
-        # draw samples from approximating dropout distribution
         for j in range(k):
-            l = - (model(X_train[i]) - y_train[i])**2 / (2*noise_variance) # - 1/2 * np.log(2*np.pi*noise_variance)
-            k_losses.append(l.item())
+            # sample new weights each time
+            model = LinearModel(d, prior_variance, p).double()
+            if i > 0:
+                model, _ = train_to_convergence(model, X_train[:i], y_train[:i], p)
 
-        n_losses.append(k_losses)
+            model.eval()
+            sotl -= (model(X_train[i]) - y_train[i])**2 / (2*noise_variance) # - 1/2 * np.log(2*np.pi*noise_variance)
+
+            if j == 0:
+                # draw k Monte Carlo dropout samples to approximate expectation of P(D|theta)
+                # draw samples from approximating dropout distribution
+                # put model in train to get loss with Monte Carlo dropout
+                model.train()
+                for e in range(k):
+                    mc_sotl -= (model(X_train[i]) - y_train[i])**2 / (2*noise_variance) # - 1/2 * np.log(2*np.pi*noise_variance)
 
     # L^(D) from Bayesian perspective
-    sotl = 1 / k * sum(map(sum, n_losses))
+    sotl *= (1/k)
+    mc_sotl *= (1/k)
 
     X_test = torch.tensor(X_test)
     y_test = torch.tensor(y_test)
@@ -60,21 +61,19 @@ def sample_then_optimize(p, X_train, y_train, X_test, y_test, prior_variance=1.0
     y_test.to(device)
 
     # final model is model trained on all data
-    w = torch.normal(0, prior_variance, (len(X_train[0]),))
-    final_model, naive_sotl = train_to_convergence(w, X_train, y_train, p)
+    final_model = LinearModel(d, prior_variance, p).double()
+    final_model, naive_sotl = train_to_convergence(final_model, X_train, y_train, p)
 
     final_model.eval()
     y_pred = final_model(X_test)
 
-    # higher gen is better
-    neg_test_loss = -nn.MSELoss()(y_pred.flatten(), y_test)
+    test_loss = nn.MSELoss()(y_pred.flatten(), y_test)
 
     # return naive_sotl for final model trained on all data
-    return sotl, naive_sotl, neg_test_loss
+    return sotl, mc_sotl, naive_sotl, test_loss
 
 
-def train_to_convergence(w, X, y, p=0, step_size=0.001, num_steps=500):
-    model = LinearModel(w, p).double()
+def train_to_convergence(model, X, y, step_size=0.001, num_steps=500):
     model.train()
 
     optimizer = torch.optim.SGD(model.parameters(), lr=step_size)
@@ -91,7 +90,7 @@ def train_to_convergence(w, X, y, p=0, step_size=0.001, num_steps=500):
         loss = nn.MSELoss(reduction='mean')(y_pred.flatten(), y)
 
         naive_sotl -= loss.item()
-        # print(loss.item())
+
         if loss.item() < best["loss"]:
             best = {"epoch": s, "loss": loss.item(), "naive_sotl": naive_sotl, "model": deepcopy(model)}
 

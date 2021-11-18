@@ -10,7 +10,7 @@
 #SBATCH --job-name=lr_test
 
 # set number of GPUs
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:0
 
 # mail alert at start, end and abortion of execution
 #SBATCH --mail-type=ALL
