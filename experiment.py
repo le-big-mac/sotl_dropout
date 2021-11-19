@@ -107,14 +107,14 @@ for split in range(int(n_splits)):
     print('Number of training examples: ' + str(X_train.shape[0]))
     print('Number of test examples: ' + str(X_test.shape[0]))
 
-    sample_results = {"sotl": [], "mc_sotl": [], "naive_sotl": [], "gen": []}
+    sample_results = {"sotl": [], "mc_sotl": [], "naive_sotl": [], "test_loss": []}
     for d_prob in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]:
         print("Dropout: {}".format(d_prob))
         sotl, mc_sotl, naive_sotl, test_loss = train.sample_then_optimize(d_prob, X_train, y_train, X_test, y_test)
         sample_results["sotl"].append(sotl)
         sample_results["mc_sotl"].append(mc_sotl)
         sample_results["naive_sotl"].append(naive_sotl)
-        sample_results["test loss"].append(test_loss)
+        sample_results["test_loss"].append(test_loss)
 
     csv_str = "{},\n".format(split)
     for k in sample_results:
