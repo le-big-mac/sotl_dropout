@@ -56,8 +56,8 @@ def sample_then_optimize(p, X_train, y_train, X_test, y_test, prior_variance=1.0
     sotl = (1/k)*sum(sotl_list)
     mc_sotl = (1/k)*sum(mc_sotl_list)
 
-    print("SoTL: {}".format(', '.join(sotl_list)))
-    print("MC SoTL: {}".format(', '.join(mc_sotl_list)))
+    print("SoTL: {}".format(', '.join(map(str, sotl_list))))
+    print("MC SoTL: {}".format(', '.join(map(str, mc_sotl_list))))
 
     X_test = torch.tensor(X_test)
     y_test = torch.tensor(y_test)
@@ -77,11 +77,11 @@ def sample_then_optimize(p, X_train, y_train, X_test, y_test, prior_variance=1.0
         naive_sotls.append(n_sotl)
         test_losses.append(nn.MSELoss()(y_pred.flatten(), y_test).item())
 
-    print("Naive SoTL: {}".format(', '.join(naive_sotls)))
-    print("Test Losses: {}".format(', '.join(test_losses)))
-
     test_loss = (1/k) * sum(test_losses)
     naive_sotl = (1/k) * sum(naive_sotls)
+
+    print("Naive SoTL: {}".format(', '.join(map(str, naive_sotls))))
+    print("Test Losses: {}".format(', '.join(map(str, test_losses))))
 
     # return naive_sotl for final model trained on all data
     return sotl, mc_sotl, naive_sotl, test_loss
