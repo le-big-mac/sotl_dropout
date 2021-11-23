@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 from torch import nn
 from copy import deepcopy
@@ -30,8 +29,8 @@ def sample_then_optimize(p, X_train, y_train, X_test, y_test, prior_variance=1.0
     y_train.to(device)
     d = len(X_train[0])
 
-    sotl = 0
-    mc_sotl = 0
+    sotl_list = []
+    mc_sotl_list = []
 
     for i in range(n-1):
         for j in range(k):
@@ -41,7 +40,8 @@ def sample_then_optimize(p, X_train, y_train, X_test, y_test, prior_variance=1.0
                 model, _ = train_to_convergence(model, X_train[:i], y_train[:i], p)
 
             model.eval()
-            sotl -= (model(X_train[i]) - y_train[i])**2 / (2*noise_variance) # - 1/2 * np.log(2*np.pi*noise_variance)
+            neg_loss = - (model(X_train[i]) - y_train[i]).item()**2 / (2*noise_variance) # - 1/2 * np.log(2*np.pi*noise_variance)
+            sotl_list.append(neg_loss)
 
             if j == 0:
                 # draw k Monte Carlo dropout samples to approximate expectation of P(D|theta)
@@ -49,11 +49,15 @@ def sample_then_optimize(p, X_train, y_train, X_test, y_test, prior_variance=1.0
                 # put model in train to get loss with Monte Carlo dropout
                 model.train()
                 for e in range(k):
-                    mc_sotl -= (model(X_train[i]) - y_train[i])**2 / (2*noise_variance) # - 1/2 * np.log(2*np.pi*noise_variance)
+                    neg_mc_loss = -(model(X_train[i]) - y_train[i]).item()**2 / (2*noise_variance) # - 1/2 * np.log(2*np.pi*noise_variance)
+                    mc_sotl_list.append(neg_mc_loss)
 
     # L^(D) from Bayesian perspective
-    sotl *= (1/k)
-    mc_sotl *= (1/k)
+    sotl = (1/k)*sum(sotl_list)
+    mc_sotl = (1/k)*sum(mc_sotl_list)
+
+    print("SoTL: {}".format(', '.join(sotl_list)))
+    print("MC SoTL: {}".format(', '.join(mc_sotl_list)))
 
     X_test = torch.tensor(X_test)
     y_test = torch.tensor(y_test)
@@ -61,13 +65,23 @@ def sample_then_optimize(p, X_train, y_train, X_test, y_test, prior_variance=1.0
     y_test.to(device)
 
     # final model is model trained on all data
-    final_model = LinearModel(d, prior_variance, p).double()
-    final_model, naive_sotl = train_to_convergence(final_model, X_train, y_train, p)
+    test_losses = []
+    naive_sotls = []
+    for i in range(k):
+        final_model = LinearModel(d, prior_variance, p).double()
+        final_model, n_sotl = train_to_convergence(final_model, X_train, y_train, p)
 
-    final_model.eval()
-    y_pred = final_model(X_test)
+        final_model.eval()
+        y_pred = final_model(X_test)
 
-    test_loss = nn.MSELoss()(y_pred.flatten(), y_test)
+        naive_sotls.append(n_sotl)
+        test_losses.append(nn.MSELoss()(y_pred.flatten(), y_test).item())
+
+    print("Naive SoTL: {}".format(', '.join(naive_sotls)))
+    print("Test Losses: {}".format(', '.join(test_losses)))
+
+    test_loss = (1/k) * sum(test_losses)
+    naive_sotl = (1/k) * sum(naive_sotls)
 
     # return naive_sotl for final model trained on all data
     return sotl, mc_sotl, naive_sotl, test_loss
@@ -79,10 +93,8 @@ def train_to_convergence(model, X, y, step_size=0.001, num_steps=500):
     optimizer = torch.optim.SGD(model.parameters(), lr=step_size)
 
     naive_sotl = 0
-    best = {"epoch": 0, "loss": np.inf, "naive_sotl": 0, "model": deepcopy(model)}
-    s = 0
-    # end training if we reach max number of steps or have not improved in 50
-    while s-50 < best["epoch"] and s < num_steps:
+    # end training if we reach max number of steps or have not improved in 50 epochs
+    for i in range(num_steps):
         optimizer.zero_grad()
 
         y_pred = model(X)
@@ -91,13 +103,31 @@ def train_to_convergence(model, X, y, step_size=0.001, num_steps=500):
 
         naive_sotl -= loss.item()
 
-        if loss.item() < best["loss"]:
-            best = {"epoch": s, "loss": loss.item(), "naive_sotl": naive_sotl, "model": deepcopy(model)}
-
         loss.backward()
         optimizer.step()
 
-        s += 1
+    return model, naive_sotl
 
-    # print("Steps: {}".format(s))
-    return best["model"], best["naive_sotl"]
+    # best = {"epoch": 0, "loss": np.inf, "naive_sotl": 0, "model": deepcopy(model)}
+    # s = 0
+    # naive_sotl = 0
+    #
+    # while s-50 < best["epoch"] and s < num_steps:
+    #     optimizer.zero_grad()
+    #
+    #     y_pred = model(X)
+    #
+    #     loss = nn.MSELoss(reduction='mean')(y_pred.flatten(), y)
+    #
+    #     naive_sotl -= loss.item()
+    #
+    #     if loss.item() < best["loss"]:
+    #         best = {"epoch": s, "loss": loss.item(), "naive_sotl": naive_sotl, "model": deepcopy(model)}
+    #
+    #     loss.backward()
+    #     optimizer.step()
+    #
+    #     s += 1
+    #
+    # # print("Steps: {}".format(s))
+    # return best["model"], best["naive_sotl"]
