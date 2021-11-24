@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from copy import deepcopy
 from math import sqrt
+import numpy as np
 
 
 device = "cpu"
@@ -92,9 +93,12 @@ def train_to_convergence(model, X, y, step_size=0.001, num_steps=500):
 
     optimizer = torch.optim.SGD(model.parameters(), lr=step_size)
 
+    best = {"epoch": 0, "loss": np.inf, "naive_sotl": 0, "model": deepcopy(model)}
+    s = 0
     naive_sotl = 0
-    # end training if we reach max number of steps or have not improved in 50 epochs
-    for i in range(num_steps):
+
+    # end training if we have not improved in 50 steps or reach 500 steps
+    while s-50 < best["epoch"] and s < num_steps:
         optimizer.zero_grad()
 
         y_pred = model(X)
@@ -103,31 +107,13 @@ def train_to_convergence(model, X, y, step_size=0.001, num_steps=500):
 
         naive_sotl -= loss.item()
 
+        if loss.item() < best["loss"]:
+            best = {"epoch": s, "loss": loss.item(), "naive_sotl": naive_sotl, "model": deepcopy(model)}
+
         loss.backward()
         optimizer.step()
 
-    return model, naive_sotl
+        s += 1
 
-    # best = {"epoch": 0, "loss": np.inf, "naive_sotl": 0, "model": deepcopy(model)}
-    # s = 0
-    # naive_sotl = 0
-    #
-    # while s-50 < best["epoch"] and s < num_steps:
-    #     optimizer.zero_grad()
-    #
-    #     y_pred = model(X)
-    #
-    #     loss = nn.MSELoss(reduction='mean')(y_pred.flatten(), y)
-    #
-    #     naive_sotl -= loss.item()
-    #
-    #     if loss.item() < best["loss"]:
-    #         best = {"epoch": s, "loss": loss.item(), "naive_sotl": naive_sotl, "model": deepcopy(model)}
-    #
-    #     loss.backward()
-    #     optimizer.step()
-    #
-    #     s += 1
-    #
-    # # print("Steps: {}".format(s))
-    # return best["model"], best["naive_sotl"]
+    # print("Steps: {}".format(s))
+    return best["model"], best["naive_sotl"]
