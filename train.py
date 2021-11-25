@@ -71,11 +71,12 @@ def sample_then_optimize(p, X_train, y_train, X_test, y_test, prior_std=1.0, noi
         final_model = LinearModel(d, prior_std, p).double()
         final_model, n_sotl = train_to_convergence(final_model, X_train, y_train, weight_decay=weight_decay)
 
+        naive_sotls.append(n_sotl)
+
         final_model.eval()
         y_pred = final_model(X_test)
 
-        naive_sotls.append(n_sotl)
-        test_losses.append(nn.MSELoss()(y_pred.flatten(), y_test).item())
+        test_losses.append(nn.MSELoss(reduction="mean")(y_pred.flatten(), y_test).item())
 
     test_loss = (1/k) * sum(test_losses)
     naive_sotl = (1/k) * sum(naive_sotls)
@@ -104,8 +105,8 @@ def train_to_convergence(model, X, y, step_size=0.01, num_steps=500, weight_deca
 
         y_pred = model(X)
 
-        loss = nn.MSELoss(reduction='mean')(y_pred.flatten(), y) if not weight_decay else \
-            nn.MSELoss(reduction='sum')(y_pred.flatten(), y) + (model.w.weight - initial_weights).pow(2).sum() / 10
+        loss = nn.MSELoss(reduction="mean")(y_pred.flatten(), y) if not weight_decay else \
+            nn.MSELoss(reduction="sum")(y_pred.flatten(), y) + (model.w.weight - initial_weights).pow(2).sum() / 10
 
         naive_sotl -= loss.item()
 

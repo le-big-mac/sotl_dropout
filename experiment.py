@@ -2,7 +2,6 @@ import numpy as np
 import argparse
 import torch
 import train
-import pickle
 
 parser = argparse.ArgumentParser()
 

@@ -23,4 +23,4 @@
 module load python3/anaconda
 source activate generalization
 
-python3 experiment.py --dir="$1"
+python3 experiment.py --dir="$1" --weight_decay="$2"
