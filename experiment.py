@@ -10,12 +10,14 @@ parser.add_argument('--dir', '-d', required=True, help='Name of the UCI Dataset 
 parser.add_argument('--normalize', '-n', default=True, type=bool, help='Normalize training features')
 parser.add_argument('--normalize_labels', '-nl', default=True, type=bool,
                     help='Normalize labels (useful for additive noise)')
+parser.add_argument('--weight_decay', '-w', default=False, type=bool, help='Osband weight decay')
 
 args = parser.parse_args()
 
 data_directory = args.dir
 normalize = args.normalize
 normalize_labels = args.normalize_labels
+results_dir = "results_wd" if args.weight_decay else "results"
 
 # We delete previous results
 
@@ -64,7 +66,7 @@ n_splits = np.loadtxt(_N_SPLITS_FILE)
 # print("Done.")
 
 header = "dropout_prob,0.0,0.1,0.2,0.3,0.4,0.5,\n"
-with open("./results/{}.csv".format(data_directory), "w+") as f:
+with open("./{}/{}.csv".format(results_dir, data_directory), "w+") as f:
     f.write(header)
 
 print(data_directory)
@@ -112,7 +114,8 @@ for split in range(int(n_splits)):
     sample_results = {"sotl": [], "mc_sotl": [], "naive_sotl": [], "test_loss": []}
     for d_prob in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]:
         print("Dropout prob: {}".format(d_prob))
-        sotl, mc_sotl, naive_sotl, test_loss = train.sample_then_optimize(d_prob, X_train, y_train, X_test, y_test)
+        sotl, mc_sotl, naive_sotl, test_loss = train.sample_then_optimize(d_prob, X_train, y_train, X_test, y_test,
+                                                                          weight_decay=args.weight_decay)
         sample_results["sotl"].append(sotl)
         sample_results["mc_sotl"].append(mc_sotl)
         sample_results["naive_sotl"].append(naive_sotl)
@@ -124,5 +127,5 @@ for split in range(int(n_splits)):
         csv_str += ",".join(str(e) for e in sample_results[k])
         csv_str += ",\n"
 
-    with open("./results/{}.csv".format(data_directory), "a") as f:
+    with open("./{}/{}.csv".format(results_dir, data_directory), "a") as f:
         f.write(csv_str)
