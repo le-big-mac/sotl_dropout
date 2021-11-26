@@ -6,11 +6,10 @@ import train
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--dir', '-d', required=True, help='Name of the UCI Dataset directory. Eg: bostonHousing')
-parser.add_argument('--normalize', '-n', default=True, type=bool, help='Normalize training features')
-parser.add_argument('--normalize_labels', '-nl', default=True, type=bool,
+parser.add_argument('--normalize', '-n', action='store_true', default=False, help='Normalize training features')
+parser.add_argument('--normalize_labels', '-nl', action='store_true', default=True,
                     help='Normalize labels (useful for additive noise)')
-parser.add_argument('--weight_decay', '-wd', dest='weight_decay', action='store_true')
-parser.set_defaults(weight_decay=False)
+parser.add_argument('--weight_decay', '-wd', action='store_true', default=False)
 
 args = parser.parse_args()
 
