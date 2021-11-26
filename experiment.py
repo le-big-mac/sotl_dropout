@@ -9,13 +9,15 @@ parser.add_argument('--dir', '-d', required=True, help='Name of the UCI Dataset 
 parser.add_argument('--normalize', '-n', default=True, type=bool, help='Normalize training features')
 parser.add_argument('--normalize_labels', '-nl', default=True, type=bool,
                     help='Normalize labels (useful for additive noise)')
-parser.add_argument('--weight_decay', '-w', default=False, type=bool, help='Osband weight decay')
+parser.add_argument('--weight_decay', '-wd', dest='weight_decay', action='store_true')
+parser.set_defaults(weight_decay=False)
 
 args = parser.parse_args()
 
 data_directory = args.dir
 normalize = args.normalize
 normalize_labels = args.normalize_labels
+print(args.weight_decay)
 results_dir = "results_wd" if args.weight_decay else "results"
 
 # We delete previous results
@@ -92,7 +94,6 @@ for split in range(int(n_splits)):
         mean_X_train = np.zeros(X_train.shape[1])
 
     X_train = (X_train - np.full(X_train.shape, mean_X_train)) / np.full(X_train.shape, std_X_train)
-    print(X_train[0])
     X_test = (X_test - np.full(X_test.shape, mean_X_train)) / np.full(X_test.shape, std_X_train)
 
     # useful for scaling additive noise
