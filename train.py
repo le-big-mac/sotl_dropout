@@ -30,7 +30,7 @@ def sample_then_optimize(p, X_train, y_train, X_test, y_test, k=10, weight_decay
     y_train.to(device)
     d = len(X_train[0])
 
-    prior_std = sqrt(1/d)
+    prior_std = sqrt(1/(d+1))
     noise_std = 1
 
     sotl_list = []
