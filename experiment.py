@@ -6,7 +6,7 @@ import train
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--dir', '-d', required=True, help='Name of the UCI Dataset directory. Eg: bostonHousing')
-parser.add_argument('--normalize', '-n', action='store_true', default=False, help='Normalize training features')
+parser.add_argument('--normalize', '-n', action='store_true', default=True, help='Normalize training features')
 parser.add_argument('--normalize_labels', '-nl', action='store_true', default=True,
                     help='Normalize labels (useful for additive noise)')
 parser.add_argument('--weight_decay', '-wd', action='store_true', default=False)
