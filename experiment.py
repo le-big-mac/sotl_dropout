@@ -65,8 +65,10 @@ y = data[:, int(index_target.tolist())]
 n_splits = np.loadtxt(_N_SPLITS_FILE)
 # print("Done.")
 
+output_file = "./{}/{}_wd.csv".format(results_dir, data_directory) if args.weight_decay \
+    else "./{}/{}.csv".format(results_dir, data_directory)
 header = "dropout_prob,0.0,0.1,0.2,0.3,0.4,0.5,\n"
-with open("./{}/{}.csv".format(results_dir, data_directory), "w+") as f:
+with open(output_file, "w+") as f:
     f.write(header)
 
 print(data_directory)
@@ -124,5 +126,5 @@ for split in range(int(n_splits)):
         csv_str += ",".join(str(e) for e in sample_results[k])
         csv_str += ",\n"
 
-    with open("./{}/{}.csv".format(results_dir, data_directory), "a") as f:
+    with open(output_file, "a") as f:
         f.write(csv_str)
