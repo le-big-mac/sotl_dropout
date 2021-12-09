@@ -23,13 +23,16 @@ class LinearModel(nn.Module):
 
 
 def sample_then_optimize(p, X_train, y_train, X_test, y_test, k=10, weight_decay=False):
-    n = len(X_train)
     X_train = torch.tensor(X_train)
     y_train = torch.tensor(y_train)
     X_train.to(device)
     y_train.to(device)
-    d = len(X_train[0])
+    X_test = torch.tensor(X_test)
+    y_test = torch.tensor(y_test)
+    X_test.to(device)
+    y_test.to(device)
 
+    d = len(X_train[0])
     prior_std = sqrt(1/(d+1))
 
     # final model is model trained on all data
