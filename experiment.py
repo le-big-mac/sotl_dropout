@@ -17,7 +17,7 @@ data_directory = args.dir
 normalize = args.normalize
 normalize_labels = args.normalize_labels
 print(args.weight_decay)
-results_dir = "results_wd" if args.weight_decay else "results"
+results_dir = "results_naive"
 
 # We delete previous results
 
