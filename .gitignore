@@ -1,5 +1,8 @@
 # My stuff
 .idea/
+results/
+results_wd/
+correlation_results.pickle
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
