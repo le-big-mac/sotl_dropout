@@ -41,10 +41,11 @@ def sample_then_optimize(p, X_train, y_train, X_test, y_test, k=10, weight_decay
             # sample new weights each time
             model = LinearModel(d, prior_std, p).double()
             if i > 0:
-                model, _ = train_to_convergence(model, X_train[:i], y_train[:i], weight_decay=weight_decay)
+                model, _ = train_to_convergence(model, X_train[:i], y_train[:i], weight_decay=weight_decay,
+                                                early_stopping=True)
 
             model.eval()
-            neg_loss = - (model(X_train[i]) - y_train[i]).item()**2 / (2*noise_std**2) # - 1/2 * np.log(2*np.pi*noise_variance)
+            neg_loss = - (model(X_train[i]) - y_train[i]).item()**2 / (2*noise_std**2)  # - 1/2 * np.log(2*np.pi*noise_variance)
             sotl_list.append(neg_loss)
 
             if j == 0:
@@ -53,7 +54,7 @@ def sample_then_optimize(p, X_train, y_train, X_test, y_test, k=10, weight_decay
                 # put model in train to get loss with Monte Carlo dropout
                 model.train()
                 for e in range(k):
-                    neg_mc_loss = -(model(X_train[i]) - y_train[i]).item()**2 / (2*noise_std**2) # - 1/2 * np.log(2*np.pi*noise_variance)
+                    neg_mc_loss = -(model(X_train[i]) - y_train[i]).item()**2 / (2*noise_std**2)  # - 1/2 * np.log(2*np.pi*noise_variance)
                     mc_sotl_list.append(neg_mc_loss)
 
         print("SoTL D<{}: {}".format(i, ', '.join(map(str, sotl_list[-k:]))))
@@ -73,7 +74,8 @@ def sample_then_optimize(p, X_train, y_train, X_test, y_test, k=10, weight_decay
     naive_sotls = []
     for i in range(k):
         final_model = LinearModel(d, prior_std, p).double()
-        final_model, n_sotl = train_to_convergence(final_model, X_train, y_train, weight_decay=weight_decay)
+        final_model, n_sotl = train_to_convergence(final_model, X_train, y_train, weight_decay=weight_decay,
+                                                   early_stopping=True)
 
         naive_sotls.append(n_sotl)
 
@@ -92,7 +94,7 @@ def sample_then_optimize(p, X_train, y_train, X_test, y_test, k=10, weight_decay
     return sotl, mc_sotl, naive_sotl, test_loss
 
 
-def train_to_convergence(model, X, y, step_size=0.01, num_steps=500, weight_decay=False):
+def train_to_convergence(model, X, y, step_size=0.01, num_steps=500, weight_decay=False, early_stopping=False):
     model.train()
     initial_weights = deepcopy(model.w.weight).detach()
 
@@ -104,8 +106,14 @@ def train_to_convergence(model, X, y, step_size=0.01, num_steps=500, weight_deca
     naive_sotl = 0
     last_loss = np.inf
 
+    def condition():
+        if early_stopping:
+            return s-50 < best["epoch"] and s < num_steps and last_loss > 1e-3
+        else:
+            return s < num_steps
+
     # end training if we have not improved in 50 steps or reach 500 steps
-    while s-50 < best["epoch"] and s < num_steps and last_loss > 1e-3:
+    while condition():
         optimizer.zero_grad()
 
         y_pred = model(X)
@@ -116,7 +124,7 @@ def train_to_convergence(model, X, y, step_size=0.01, num_steps=500, weight_deca
         last_loss = loss.item()
         naive_sotl -= loss.item()
 
-        if loss.item() < best["loss"]:
+        if early_stopping and loss.item() < best["loss"]:
             best = {"epoch": s, "loss": loss.item(), "naive_sotl": naive_sotl, "model": deepcopy(model)}
 
         loss.backward()
@@ -126,4 +134,7 @@ def train_to_convergence(model, X, y, step_size=0.01, num_steps=500, weight_deca
         s += 1
 
     # print("Steps: {}".format(s))
-    return best["model"], best["naive_sotl"]
+    if early_stopping:
+        return best["model"], best["naive_sotl"]
+    else:
+        return model, naive_sotl
