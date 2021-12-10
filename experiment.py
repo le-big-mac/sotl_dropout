@@ -16,8 +16,11 @@ args = parser.parse_args()
 data_directory = args.dir
 normalize = args.normalize
 normalize_labels = args.normalize_labels
-print(args.weight_decay)
-results_dir = "results_wd" if args.weight_decay else "results"
+weight_decay = args.weight_decay
+results_dir = "results"
+
+print(data_directory)
+print("Weight decay: {}".format(weight_decay))
 
 # We delete previous results
 
@@ -65,12 +68,15 @@ y = data[:, int(index_target.tolist())]
 n_splits = np.loadtxt(_N_SPLITS_FILE)
 # print("Done.")
 
+output_file = "./{}/{}_wd.csv".format(results_dir, data_directory) if weight_decay \
+    else "./{}/{}.csv".format(results_dir, data_directory)
 header = "dropout_prob,0.0,0.1,0.2,0.3,0.4,0.5,\n"
-with open("./{}/{}.csv".format(results_dir, data_directory), "w+") as f:
+with open(output_file, "w+") as f:
     f.write(header)
 
-print(data_directory)
 for split in range(int(n_splits)):
+    if split < 15:
+        continue
     print("Split: {}".format(split))
     # We load the indexes of the training and test sets
     # print('Loading file: ' + _get_index_train_test_path(split, train=True))
@@ -114,7 +120,7 @@ for split in range(int(n_splits)):
     for d_prob in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]:
         print("Dropout prob: {}".format(d_prob))
         sotl, mc_sotl, naive_sotl, test_loss = train.sample_then_optimize(d_prob, X_train, y_train, X_test, y_test,
-                                                                          weight_decay=args.weight_decay)
+                                                                          weight_decay=weight_decay)
         sample_results["sotl"].append(sotl)
         sample_results["mc_sotl"].append(mc_sotl)
         sample_results["naive_sotl"].append(naive_sotl)
@@ -126,5 +132,5 @@ for split in range(int(n_splits)):
         csv_str += ",".join(str(e) for e in sample_results[k])
         csv_str += ",\n"
 
-    with open("./{}/{}.csv".format(results_dir, data_directory), "a") as f:
+    with open(output_file, "a") as f:
         f.write(csv_str)
