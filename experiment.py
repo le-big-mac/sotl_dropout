@@ -75,8 +75,6 @@ with open(output_file, "w+") as f:
     f.write(header)
 
 for split in range(int(n_splits)):
-    if split < 15:
-        continue
     print("Split: {}".format(split))
     # We load the indexes of the training and test sets
     # print('Loading file: ' + _get_index_train_test_path(split, train=True))
