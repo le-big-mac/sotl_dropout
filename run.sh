@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 
 # set max wallclock time
-#SBATCH --time=24:00:00
+#SBATCH --time=48:00:00
 
 # set name of job
 #SBATCH --job-name=sotl_dropout
@@ -23,4 +23,4 @@
 module load python3/anaconda
 source activate generalization
 
-python3 experiment.py --dir="$1" --weight_decay="$2"
+python3 experiment.py --dir="$1"

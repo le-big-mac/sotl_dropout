@@ -70,28 +70,40 @@ def sample_then_optimize(p, X_train, y_train, X_test, y_test, k=10, weight_decay
     y_test.to(device)
 
     # final model is model trained on all data
-    test_losses = []
+    early_stop_naive_sotls = []
+    early_stop_test_losses = []
+
     naive_sotls = []
+    test_losses = []
+
     for i in range(k):
-        final_model = LinearModel(d, prior_std, p).double()
-        final_model, n_sotl = train_to_convergence(final_model, X_train, y_train, weight_decay=weight_decay,
-                                                   early_stopping=True)
+        for early_stop in (True, False):
+            final_model = LinearModel(d, prior_std, p).double()
+            final_model, n_sotl = train_to_convergence(final_model, X_train, y_train, weight_decay=weight_decay,
+                                                       early_stopping=early_stop)
 
-        naive_sotls.append(n_sotl)
+            final_model.eval()
+            y_pred = final_model(X_test)
+            loss = nn.MSELoss(reduction="mean")(y_pred.flatten(), y_test).item()
 
-        final_model.eval()
-        y_pred = final_model(X_test)
+            if early_stop:
+                early_stop_naive_sotls.append(n_sotl)
+                early_stop_test_losses.append(loss)
+            else:
+                naive_sotls.append(n_sotl)
+                test_losses.append(loss)
 
-        test_losses.append(nn.MSELoss(reduction="mean")(y_pred.flatten(), y_test).item())
+    early_stop_test_loss = sum(early_stop_test_losses) / k
+    early_stop_naive_sotl = sum(early_stop_naive_sotls) / k
 
-    test_loss = (1/k) * sum(test_losses)
-    naive_sotl = (1/k) * sum(naive_sotls)
+    test_loss = sum(test_losses) / k
+    naive_sotl = sum(naive_sotls) / k
 
     print("Naive SoTL: {}".format(', '.join(map(str, naive_sotls))))
     print("Test Losses: {}".format(', '.join(map(str, test_losses))))
 
     # return naive_sotl for final model trained on all data
-    return sotl, mc_sotl, naive_sotl, test_loss
+    return sotl, mc_sotl, early_stop_naive_sotl, early_stop_test_loss, naive_sotl, test_loss,
 
 
 def train_to_convergence(model, X, y, step_size=0.01, num_steps=500, weight_decay=False, early_stopping=False):

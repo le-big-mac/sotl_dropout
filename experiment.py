@@ -116,13 +116,16 @@ for split in range(int(n_splits)):
     print('Number of training examples: ' + str(X_train.shape[0]))
     print('Number of test examples: ' + str(X_test.shape[0]))
 
-    sample_results = {"sotl": [], "mc_sotl": [], "naive_sotl": [], "test_loss": []}
+    sample_results = {"sotl": [], "mc_sotl": [], "early_stopping_naive_sotl": [], "early_stopping_test_loss": [],
+                      "naive_sotl": [], "test_loss": []}
     for d_prob in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]:
         print("Dropout prob: {}".format(d_prob))
-        sotl, mc_sotl, naive_sotl, test_loss = train.sample_then_optimize(d_prob, X_train, y_train, X_test, y_test,
-                                                                          weight_decay=weight_decay)
+        sotl, mc_sotl, early_stop_naive_sotl, early_stop_test_loss, naive_sotl, test_loss = \
+            train.sample_then_optimize(d_prob, X_train, y_train, X_test, y_test, weight_decay=weight_decay)
         sample_results["sotl"].append(sotl)
         sample_results["mc_sotl"].append(mc_sotl)
+        sample_results["early_stopping_naive_sotl"].append(early_stop_naive_sotl)
+        sample_results["early_stopping_test_loss"].append(early_stop_test_loss)
         sample_results["naive_sotl"].append(naive_sotl)
         sample_results["test_loss"].append(test_loss)
 
