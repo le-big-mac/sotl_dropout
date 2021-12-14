@@ -1,4 +1,4 @@
-
+from sklearn.model_selection import KFold
 import numpy as np
 
 # We set the random seed
@@ -11,22 +11,16 @@ data = np.loadtxt('data.txt')
 n = data.shape[ 0 ]
 
 # We generate the training test splits
+indices_to_use = np.random.choice(range(n), 1000, replace = False)
 
-n_splits = 5
-for i in range(n_splits):
-
-    permutation = np.random.choice(range(n), n, replace = False)
-
-    end_train = round(n * 9.0 / 10)
-    end_test = n
-
-    index_train = permutation[ 0 : end_train ]
-    index_test = permutation[ end_train : n ]
+n_splits = 20
+kf = KFold(n_splits=20)
+for i, (train, test) in enumerate(kf.split(range(1000))):
+    index_train = indices_to_use[train]
+    index_test = indices_to_use[test]
 
     np.savetxt("index_train_{}.txt".format(i), index_train, fmt = '%d')
     np.savetxt("index_test_{}.txt".format(i), index_test, fmt = '%d')
-
-    print i
 
 np.savetxt("n_splits.txt", np.array([ n_splits ]), fmt = '%d')
 
